@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   findProductById,
   getTotalLabelCount,
+  applyBulkSizeRowField,
   marketplaceTabs,
   sortProductsByArticle,
+  updateSizeRow,
   wildberriesProducts
 } from '../utils/marketplaceLabels'
 
@@ -39,5 +41,28 @@ describe('marketplace label generator data', () => {
     const product = findProductById(wildberriesProducts, 1018)
 
     expect(product && getTotalLabelCount(product)).toBe(5)
+  })
+
+  it('updates one editable label row without mutating the source row', () => {
+    const row = wildberriesProducts[0].sizes[0]
+    const updated = updateSizeRow(row, 'sellerName', 'ООО Новый продавец')
+
+    expect(updated.sellerName).toBe('ООО Новый продавец')
+    expect(row.sellerName).toBe('ИП Гладких Елена Евгеньевна')
+  })
+
+  it('applies bulk values to every selected size row', () => {
+    const rows = wildberriesProducts[0].sizes
+    const updated = applyBulkSizeRowField(rows, 'quantity', 3)
+
+    expect(updated).toHaveLength(rows.length)
+    expect(updated.every((row) => row.quantity === 3)).toBe(true)
+    expect(rows.every((row) => row.quantity === 1)).toBe(true)
+  })
+
+  it('ignores empty bulk values', () => {
+    const rows = wildberriesProducts[0].sizes
+
+    expect(applyBulkSizeRowField(rows, 'brand', '')).toBe(rows)
   })
 })

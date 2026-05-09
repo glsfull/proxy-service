@@ -17,6 +17,8 @@ export interface WildberriesSizeRow {
   quantity: number
 }
 
+export type WildberriesSizeRowField = keyof WildberriesSizeRow
+
 export interface WildberriesProduct {
   id: number
   photo: string
@@ -166,4 +168,25 @@ export function findProductById(products: WildberriesProduct[], id: number | nul
 
 export function getTotalLabelCount(product: WildberriesProduct) {
   return product.sizes.reduce((sum, row) => sum + row.quantity, 0)
+}
+
+export function updateSizeRow<Field extends WildberriesSizeRowField>(
+  row: WildberriesSizeRow,
+  field: Field,
+  value: WildberriesSizeRow[Field]
+) {
+  return {
+    ...row,
+    [field]: value
+  }
+}
+
+export function applyBulkSizeRowField<Field extends WildberriesSizeRowField>(
+  rows: WildberriesSizeRow[],
+  field: Field,
+  value: WildberriesSizeRow[Field] | ''
+) {
+  if (value === '') return rows
+
+  return rows.map((row) => updateSizeRow(row, field, value))
 }

@@ -1,29 +1,125 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import {
+  applyBulkSizeRowField,
   findProductById,
   getTotalLabelCount,
   marketplaceTabs,
   sortProductsByArticle,
+  updateSizeRow,
   wildberriesProducts,
-  type Marketplace
+  type Marketplace,
+  type WildberriesSizeRow,
+  type WildberriesSizeRowField
 } from '~/utils/marketplaceLabels'
 
 const activeMarketplace = ref<Marketplace>('wildberries')
 const selectedProductId = ref<number | null>(null)
+const editableRowsByProduct = ref<Record<number, WildberriesSizeRow[]>>({})
+const showExtraFields = ref(false)
+const saved = ref(false)
+const settings = ref({
+  barcodeIndex: 0,
+  sizeMode: 'both',
+  mediaType: 'thermal',
+  thermalSize: '58 x 40 мм',
+  barcodeFormat: 'CODE128',
+  fontSize: 10,
+  textAlign: 'center'
+})
+const additionalFields = ref({
+  brand: true,
+  expiryDate: false,
+  country: false,
+  composition: false,
+  supplier: false,
+  freeText: false,
+  eac: true
+})
+const bulk = ref<Record<WildberriesSizeRowField, string>>({
+  barcode: '',
+  article: '',
+  color: '',
+  size: '',
+  productName: '',
+  sellerName: '',
+  brand: '',
+  quantity: ''
+})
 
 const sortedProducts = computed(() => sortProductsByArticle(wildberriesProducts))
 const selectedProduct = computed(() => findProductById(wildberriesProducts, selectedProductId.value))
-const selectedRows = computed(() => selectedProduct.value?.sizes ?? [])
+const selectedRows = computed(() => {
+  if (!selectedProduct.value) return []
+
+  return editableRowsByProduct.value[selectedProduct.value.id] ?? selectedProduct.value.sizes
+})
 const firstLabel = computed(() => selectedRows.value[0])
 const totalSizes = computed(() => wildberriesProducts.reduce((sum, product) => sum + product.sizes.length, 0))
+const totalLabels = computed(() => selectedRows.value.reduce((sum, row) => sum + row.quantity, 0))
+const previewAlignClass = computed(() => `align-${settings.value.textAlign}`)
 
 function openProduct(productId: number) {
   selectedProductId.value = productId
+  if (!editableRowsByProduct.value[productId]) {
+    const product = findProductById(wildberriesProducts, productId)
+    editableRowsByProduct.value = {
+      ...editableRowsByProduct.value,
+      [productId]: product?.sizes.map((row) => ({ ...row })) ?? []
+    }
+  }
 }
 
 function backToProducts() {
   selectedProductId.value = null
+}
+
+function setSetting<Key extends keyof typeof settings.value>(key: Key, value: typeof settings.value[Key]) {
+  settings.value = {
+    ...settings.value,
+    [key]: value
+  }
+}
+
+function updateSelectedRow<Field extends WildberriesSizeRowField>(
+  rowIndex: number,
+  field: Field,
+  value: WildberriesSizeRow[Field]
+) {
+  if (!selectedProduct.value) return
+
+  editableRowsByProduct.value = {
+    ...editableRowsByProduct.value,
+    [selectedProduct.value.id]: selectedRows.value.map((row, index) =>
+      index === rowIndex ? updateSizeRow(row, field, value) : row
+    )
+  }
+}
+
+function applyBulk(field: WildberriesSizeRowField) {
+  if (!selectedProduct.value) return
+
+  const rawValue = bulk.value[field]
+  const value = field === 'quantity' ? Number(rawValue) : rawValue
+  editableRowsByProduct.value = {
+    ...editableRowsByProduct.value,
+    [selectedProduct.value.id]: applyBulkSizeRowField(
+      selectedRows.value,
+      field,
+      value as WildberriesSizeRow[typeof field]
+    )
+  }
+  bulk.value = {
+    ...bulk.value,
+    [field]: ''
+  }
+}
+
+function saveDraft() {
+  saved.value = true
+  window.setTimeout(() => {
+    saved.value = false
+  }, 2000)
 }
 </script>
 
@@ -45,7 +141,7 @@ function backToProducts() {
         <div class="header-actions">
           <UButton color="gray" variant="outline">Предпросмотр</UButton>
           <UButton color="gray" variant="outline">Скачать PDF</UButton>
-          <UButton>Сохранить</UButton>
+          <UButton @click="saveDraft">{{ saved ? 'Сохранено' : 'Сохранить' }}</UButton>
         </div>
       </header>
 
@@ -113,28 +209,68 @@ function backToProducts() {
 
         <div class="label-settings">
           <span>Штрихкод:</span>
-          <UBadge>1-й</UBadge>
-          <UBadge color="gray" variant="subtle">2-й</UBadge>
+          <button
+            v-for="index in [0, 1, 2]"
+            :key="index"
+            class="setting-pill"
+            :class="{ active: settings.barcodeIndex === index }"
+            type="button"
+            @click="setSetting('barcodeIndex', index)"
+          >
+            {{ index + 1 }}-й
+          </button>
           <span>Размер:</span>
-          <UBadge color="gray" variant="subtle">Производителя</UBadge>
-          <UBadge>Пр/Рос</UBadge>
+          <button class="setting-pill" :class="{ active: settings.sizeMode === 'tech' }" type="button" @click="setSetting('sizeMode', 'tech')">Производителя</button>
+          <button class="setting-pill" :class="{ active: settings.sizeMode === 'both' }" type="button" @click="setSetting('sizeMode', 'both')">Пр/Рос</button>
           <span>Тип:</span>
-          <UBadge color="gray" variant="subtle">A4</UBadge>
-          <UBadge>Термо</UBadge>
+          <button class="setting-pill" :class="{ active: settings.mediaType === 'a4' }" type="button" @click="setSetting('mediaType', 'a4')">A4</button>
+          <button class="setting-pill" :class="{ active: settings.mediaType === 'thermal' }" type="button" @click="setSetting('mediaType', 'thermal')">Термо</button>
+          <select v-if="settings.mediaType === 'thermal'" v-model="settings.thermalSize" class="setting-select" aria-label="Размер термоэтикетки">
+            <option>58 x 40 мм</option>
+            <option>58 x 60 мм</option>
+            <option>75 x 120 мм</option>
+          </select>
           <span>Формат:</span>
-          <UBadge>CODE128</UBadge>
-          <UBadge color="gray" variant="subtle">EAN13</UBadge>
+          <button class="setting-pill" :class="{ active: settings.barcodeFormat === 'CODE128' }" type="button" @click="setSetting('barcodeFormat', 'CODE128')">CODE128</button>
+          <button class="setting-pill" :class="{ active: settings.barcodeFormat === 'EAN13' }" type="button" @click="setSetting('barcodeFormat', 'EAN13')">EAN13</button>
+          <label class="range-setting">
+            Шрифт: {{ settings.fontSize }}px
+            <input v-model.number="settings.fontSize" min="6" max="16" type="range">
+          </label>
+          <button class="setting-pill" :class="{ active: settings.textAlign === 'center' }" type="button" @click="setSetting('textAlign', 'center')">По центру</button>
+          <button class="setting-pill" :class="{ active: settings.textAlign === 'left' }" type="button" @click="setSetting('textAlign', 'left')">Слева</button>
+          <button class="setting-pill" type="button" @click="showExtraFields = !showExtraFields">Доп. поля</button>
+        </div>
+
+        <div v-if="showExtraFields" class="extra-fields">
+          <label><input v-model="additionalFields.expiryDate" type="checkbox"> Срок годности</label>
+          <label><input v-model="additionalFields.country" type="checkbox"> Страна</label>
+          <label><input v-model="additionalFields.brand" type="checkbox"> Бренд</label>
+          <label><input v-model="additionalFields.composition" type="checkbox"> Состав</label>
+          <label><input v-model="additionalFields.supplier" type="checkbox"> Поставщик</label>
+          <label><input v-model="additionalFields.freeText" type="checkbox"> Свободная надпись</label>
+          <label><input v-model="additionalFields.eac" type="checkbox"> EAC</label>
         </div>
 
         <div class="preview-band">
           <p class="panel-title">Предпросмотр этикетки</p>
-          <div class="label-preview">
+          <div class="label-preview" :class="previewAlignClass" :style="{ fontSize: `${settings.fontSize}px` }">
             <div class="barcode-lines" />
             <strong>{{ firstLabel?.barcode }}</strong>
             <span>{{ selectedProduct.name }}</span>
             <small>Арт: {{ selectedProduct.article }} · {{ firstLabel?.color }} · {{ firstLabel?.size }}</small>
-            <small>{{ selectedProduct.brand }}</small>
-            <b>EAC</b>
+            <small v-if="additionalFields.brand">{{ selectedProduct.brand }}</small>
+            <small v-if="additionalFields.expiryDate">Срок годности: 12.2027</small>
+            <small v-if="additionalFields.country">Страна: Россия</small>
+            <small v-if="additionalFields.composition">Состав: хлопок, эластан</small>
+            <small v-if="additionalFields.supplier">Поставщик: Proxy Service</small>
+            <small v-if="additionalFields.freeText">Маркировка для склада</small>
+            <b v-if="additionalFields.eac">EAC</b>
+          </div>
+          <div class="preview-meta">
+            <span>{{ selectedRows.length }} строк</span>
+            <span>{{ totalLabels }} этикеток</span>
+            <span>{{ settings.mediaType === 'thermal' ? settings.thermalSize : 'A4' }}</span>
           </div>
         </div>
 
@@ -142,30 +278,85 @@ function backToProducts() {
           <table>
             <thead>
               <tr>
-                <th>Штрихкод</th>
-                <th>Артикул</th>
-                <th>Цвет</th>
+                <th>
+                  <span>Штрихкод*</span>
+                </th>
+                <th>
+                  <span>Артикул</span>
+                  <div class="bulk-row">
+                    <input v-model="bulk.article" placeholder="Для всех...">
+                    <button type="button" title="Применить ко всем" @click="applyBulk('article')">✓</button>
+                  </div>
+                </th>
+                <th>
+                  <span>Цвет</span>
+                  <div class="bulk-row">
+                    <input v-model="bulk.color" placeholder="Для всех...">
+                    <button type="button" title="Применить ко всем" @click="applyBulk('color')">✓</button>
+                  </div>
+                </th>
                 <th>Размер</th>
-                <th>Название товара</th>
-                <th>Наименование продавца</th>
-                <th>Бренд</th>
-                <th>Кол-во</th>
+                <th>
+                  <span>Название товара</span>
+                  <div class="bulk-row">
+                    <input v-model="bulk.productName" placeholder="Для всех...">
+                    <button type="button" title="Применить ко всем" @click="applyBulk('productName')">✓</button>
+                  </div>
+                </th>
+                <th>
+                  <span>Наименование продавца*</span>
+                  <div class="bulk-row">
+                    <input v-model="bulk.sellerName" placeholder="Для всех...">
+                    <button type="button" title="Применить ко всем" @click="applyBulk('sellerName')">✓</button>
+                  </div>
+                </th>
+                <th v-if="additionalFields.brand">
+                  <span>Бренд</span>
+                  <div class="bulk-row">
+                    <input v-model="bulk.brand" placeholder="Для всех...">
+                    <button type="button" title="Применить ко всем" @click="applyBulk('brand')">✓</button>
+                  </div>
+                </th>
+                <th>
+                  <span>Кол-во*</span>
+                  <div class="bulk-row">
+                    <input v-model="bulk.quantity" min="1" type="number" placeholder="Для всех...">
+                    <button type="button" title="Применить ко всем" @click="applyBulk('quantity')">✓</button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in selectedRows" :key="row.barcode">
-                <td>{{ row.barcode }}</td>
-                <td>{{ row.article }}</td>
-                <td>{{ row.color }}</td>
-                <td>{{ row.size }}</td>
-                <td>{{ row.productName }}</td>
-                <td>{{ row.sellerName }}</td>
-                <td>{{ row.brand }}</td>
-                <td>{{ row.quantity }}</td>
+              <tr v-for="(row, rowIndex) in selectedRows" :key="row.barcode">
+                <td>
+                  <input class="cell-input" :value="row.barcode" @input="updateSelectedRow(rowIndex, 'barcode', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td>
+                  <input class="cell-input" :value="row.article" @input="updateSelectedRow(rowIndex, 'article', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td>
+                  <input class="cell-input" :value="row.color" @input="updateSelectedRow(rowIndex, 'color', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td>
+                  <input class="cell-input small" :value="row.size" @input="updateSelectedRow(rowIndex, 'size', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td>
+                  <input class="cell-input wide" :value="row.productName" @input="updateSelectedRow(rowIndex, 'productName', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td>
+                  <input class="cell-input wide" :value="row.sellerName" @input="updateSelectedRow(rowIndex, 'sellerName', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td v-if="additionalFields.brand">
+                  <input class="cell-input" :value="row.brand" @input="updateSelectedRow(rowIndex, 'brand', ($event.target as HTMLInputElement).value)">
+                </td>
+                <td>
+                  <input class="cell-input qty" min="1" type="number" :value="row.quantity" @input="updateSelectedRow(rowIndex, 'quantity', Number(($event.target as HTMLInputElement).value))">
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <p class="table-hint">* — обязательные поля. Введите значение в поле «Для всех...» и нажмите ✓, чтобы применить его ко всем строкам.</p>
       </section>
 
       <section v-else class="planned-view">
@@ -391,6 +582,65 @@ h1 {
   font-weight: 700;
 }
 
+.setting-pill {
+  min-height: 30px;
+  border: 1px solid #c9d7ea;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.setting-pill.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.setting-select {
+  min-height: 30px;
+  border: 1px solid #c9d7ea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 4px 8px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.range-setting {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+}
+
+.range-setting input {
+  width: 110px;
+}
+
+.extra-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #d6e0ee;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.extra-fields label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .preview-band {
   min-height: 220px;
   margin-top: 12px;
@@ -422,6 +672,15 @@ h1 {
   font-size: 9px;
 }
 
+.label-preview.align-left {
+  justify-items: start;
+  text-align: left;
+}
+
+.label-preview.align-left .barcode-lines {
+  justify-self: center;
+}
+
 .barcode-lines {
   width: 200px;
   height: 58px;
@@ -443,6 +702,17 @@ h1 {
   border: 2px solid #111827;
   padding: 1px 6px;
   font-size: 14px;
+}
+
+.preview-meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .table-wrap {
@@ -472,6 +742,54 @@ th {
   color: #334155;
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.bulk-row {
+  display: grid;
+  grid-template-columns: minmax(104px, 1fr) 28px;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.bulk-row input,
+.cell-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.bulk-row button {
+  width: 28px;
+  min-height: 28px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cell-input.small {
+  max-width: 90px;
+}
+
+.cell-input.wide {
+  min-width: 220px;
+}
+
+.cell-input.qty {
+  max-width: 80px;
+}
+
+.table-hint {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 td {
