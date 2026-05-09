@@ -168,7 +168,7 @@ function toggleAdditionalField(key: WildberriesSizeRowKey, checked: boolean) {
           </div>
         </div>
 
-        <div class="label-settings">
+        <div class="label-settings" :class="{ 'settings-open': isAdditionalFieldsOpen }">
           <span>Штрихкод:</span>
           <UBadge>1-й</UBadge>
           <UBadge color="gray" variant="subtle">2-й</UBadge>
@@ -181,6 +181,28 @@ function toggleAdditionalField(key: WildberriesSizeRowKey, checked: boolean) {
           <span>Формат:</span>
           <UBadge>CODE128</UBadge>
           <UBadge color="gray" variant="subtle">EAN13</UBadge>
+          <span>Текст:</span>
+          <UBadge>По центру</UBadge>
+          <UBadge color="gray" variant="subtle">Слева</UBadge>
+          <button
+            class="extra-fields-toggle"
+            type="button"
+            :aria-expanded="isAdditionalFieldsOpen"
+            @click="isAdditionalFieldsOpen = !isAdditionalFieldsOpen"
+          >
+            Доп. поля {{ isAdditionalFieldsOpen ? '▲' : '▼' }}
+          </button>
+        </div>
+
+        <div v-if="isAdditionalFieldsOpen" class="additional-fields-panel">
+          <label v-for="field in wildberriesAdditionalFields" :key="field.key" class="additional-field-option">
+            <input
+              type="checkbox"
+              :checked="selectedAdditionalFieldKeys.includes(field.key)"
+              @change="toggleAdditionalField(field.key, ($event.target as HTMLInputElement).checked)"
+            >
+            <span>{{ field.label }}</span>
+          </label>
         </div>
 
         <div class="preview-band">
@@ -193,28 +215,6 @@ function toggleAdditionalField(key: WildberriesSizeRowKey, checked: boolean) {
             <small>{{ firstLabel?.brand }}</small>
             <small v-if="firstLabel?.composition">{{ firstLabel.composition }}</small>
             <b>EAC</b>
-          </div>
-        </div>
-
-        <div class="additional-fields">
-          <button
-            class="additional-fields-head"
-            type="button"
-            :aria-expanded="isAdditionalFieldsOpen"
-            @click="isAdditionalFieldsOpen = !isAdditionalFieldsOpen"
-          >
-            <p class="panel-title">Дополнительные поля</p>
-            <span>{{ selectedAdditionalFieldKeys.length }} выбрано</span>
-          </button>
-          <div v-if="isAdditionalFieldsOpen" class="additional-grid">
-            <label v-for="field in wildberriesAdditionalFields" :key="field.key" class="additional-field-option">
-              <input
-                type="checkbox"
-                :checked="selectedAdditionalFieldKeys.includes(field.key)"
-                @change="toggleAdditionalField(field.key, ($event.target as HTMLInputElement).checked)"
-              >
-              <span>{{ field.label }}</span>
-            </label>
           </div>
         </div>
 
@@ -232,10 +232,12 @@ function toggleAdditionalField(key: WildberriesSizeRowKey, checked: boolean) {
                       @input="updateBulkValue(column.key, ($event.target as HTMLInputElement).value)"
                     >
                     <button
+                      class="bulk-apply-btn"
                       type="button"
+                      :aria-label="`Применить ко всем: ${column.label}`"
                       @click="applyBulkValue(column.key, (($event.currentTarget as HTMLButtonElement).previousElementSibling as HTMLInputElement).value)"
                     >
-                      Применить
+                      ✓
                     </button>
                   </div>
                 </th>
@@ -481,6 +483,12 @@ h1 {
   font-weight: 700;
 }
 
+.label-settings.settings-open {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: #fde68a;
+}
+
 .preview-band {
   min-height: 220px;
   margin-top: 12px;
@@ -535,54 +543,49 @@ h1 {
   font-size: 14px;
 }
 
-.additional-fields {
-  margin-top: 12px;
-  border: 1px solid #d6e0ee;
-  border-radius: 8px;
-  background: #ffffff;
-  padding: 14px;
-}
-
-.additional-fields-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  gap: 16px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.additional-fields-head span {
-  color: #64748b;
+.extra-fields-toggle {
+  min-height: 32px;
+  border: 1px solid #c9d7ea;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  padding: 4px 12px;
   font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.additional-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 10px;
-  margin-top: 12px;
+.extra-fields-toggle[aria-expanded="true"] {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.additional-fields-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 10px 14px;
+  border: 1px solid #fde68a;
+  border-top: 0;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  background: #fefce8;
+  margin-bottom: 12px;
 }
 
 .additional-field-option {
-  min-height: 42px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  border: 1px solid #d6e0ee;
-  border-radius: 6px;
-  background: #f8fafc;
-  padding: 8px 10px;
+  gap: 6px;
+  cursor: pointer;
 }
 
 .additional-field-option span {
   color: #334155;
   font-size: 13px;
-  font-weight: 800;
 }
 
 .additional-field-option input {
@@ -639,27 +642,35 @@ td {
 
 .bulk-editor {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto;
-  gap: 6px;
-  margin-top: 8px;
+  grid-template-columns: minmax(80px, 1fr) auto;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 .bulk-editor input,
 .cell-input {
-  min-height: 34px;
-  padding: 7px 8px;
+  min-height: 30px;
+  padding: 5px 7px;
 }
 
-.bulk-editor button {
-  min-height: 34px;
+.bulk-apply-btn {
+  min-height: 30px;
+  width: 30px;
   border: 1px solid #2563eb;
   border-radius: 6px;
   background: #2563eb;
   color: #ffffff;
-  padding: 0 10px;
-  font-size: 12px;
+  padding: 0;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bulk-apply-btn:hover {
+  background: #1d4ed8;
 }
 
 .cell-input:focus,
