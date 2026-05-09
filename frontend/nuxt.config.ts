@@ -8,14 +8,14 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'Barcode Analytics Dashboard',
+      title: 'Генератор этикеток маркетплейсов',
       htmlAttrs: {
         lang: 'ru'
       },
       meta: [
         {
           name: 'description',
-          content: 'Интерфейс для добавления и настройки нескольких типов баркодов в аналитическом дашборде.'
+          content: 'Интерфейс генерации этикеток маркетплейсов с вкладками Wildberries, Ozon и Яндекс Маркет.'
         }
       ]
     }

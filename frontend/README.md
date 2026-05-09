@@ -1,6 +1,6 @@
-# Barcode Analytics Dashboard
+# Marketplace Label Generator
 
-Nuxt 3 + Nuxt UI frontend for configuring several barcode widget types in an analytics dashboard.
+Nuxt 3 + Nuxt UI frontend for marketplace label generation. The current flow implements the Wildberries tab with API-style product cards and a size/barcode detail table.
 
 ## Requirements
 
