@@ -15,11 +15,12 @@ export interface WildberriesSizeRow {
   sellerName: string
   brand: string
   quantity: number
+  expirationDate: string
+  freeText: string
+  eac: string
   composition: string
   country: string
-  tnved: string
-  manufacturer: string
-  care: string
+  supplier: string
 }
 
 export interface WildberriesProduct {
@@ -46,7 +47,7 @@ export interface WildberriesAdditionalField {
   label: string
 }
 
-export const wildberriesTableColumns: WildberriesTableColumn[] = [
+export const wildberriesBaseTableColumns: WildberriesTableColumn[] = [
   { key: 'barcode', label: 'Штрихкод', bulkEditable: true },
   { key: 'article', label: 'Артикул', bulkEditable: true },
   { key: 'color', label: 'Цвет', bulkEditable: true },
@@ -54,20 +55,32 @@ export const wildberriesTableColumns: WildberriesTableColumn[] = [
   { key: 'productName', label: 'Название товара', bulkEditable: true },
   { key: 'sellerName', label: 'Наименование продавца', bulkEditable: true },
   { key: 'brand', label: 'Бренд', bulkEditable: true },
-  { key: 'quantity', label: 'Кол-во', bulkEditable: false, inputType: 'number' },
-  { key: 'composition', label: 'Состав', bulkEditable: true },
-  { key: 'country', label: 'Страна производства', bulkEditable: true },
-  { key: 'tnved', label: 'ТНВЭД', bulkEditable: true },
-  { key: 'manufacturer', label: 'Изготовитель', bulkEditable: true },
-  { key: 'care', label: 'Уход за товаром', bulkEditable: true }
+  { key: 'quantity', label: 'Кол-во', bulkEditable: false, inputType: 'number' }
 ]
 
 export const wildberriesAdditionalFields: WildberriesAdditionalField[] = [
+  { key: 'expirationDate', label: 'Срок годности' },
+  { key: 'country', label: 'Страна' },
+  { key: 'brand', label: 'Бренд' },
   { key: 'composition', label: 'Состав' },
-  { key: 'country', label: 'Страна производства' },
-  { key: 'tnved', label: 'ТНВЭД' },
-  { key: 'manufacturer', label: 'Изготовитель' },
-  { key: 'care', label: 'Уход за товаром' }
+  { key: 'supplier', label: 'Поставщик' },
+  { key: 'freeText', label: 'Свободная надпись' },
+  { key: 'eac', label: 'EAC' }
+]
+
+export const wildberriesAdditionalTableColumns: WildberriesTableColumn[] = [
+  { key: 'expirationDate', label: 'Срок годности', bulkEditable: true },
+  { key: 'country', label: 'Страна', bulkEditable: true },
+  { key: 'brand', label: 'Бренд', bulkEditable: true },
+  { key: 'composition', label: 'Состав', bulkEditable: true },
+  { key: 'supplier', label: 'Поставщик', bulkEditable: true },
+  { key: 'freeText', label: 'Свободная надпись', bulkEditable: true },
+  { key: 'eac', label: 'EAC', bulkEditable: true }
+]
+
+export const wildberriesTableColumns: WildberriesTableColumn[] = [
+  ...wildberriesBaseTableColumns,
+  ...wildberriesAdditionalTableColumns
 ]
 
 export const marketplaceTabs: MarketplaceTab[] = [
@@ -94,11 +107,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ИП Гладких Елена Евгеньевна',
         brand: 'Gladkih',
         quantity: 1,
+        expirationDate: 'не ограничен',
         composition: 'хлопок 98%, эластан 2%',
         country: 'Россия',
-        tnved: '6203423100',
-        manufacturer: 'ИП Гладких Елена Евгеньевна',
-        care: 'бережная стирка 30C'
+        supplier: 'ИП Гладких Елена Евгеньевна',
+        freeText: 'бережная стирка 30C',
+        eac: 'EAC'
       },
       {
         barcode: '2049332136849',
@@ -109,11 +123,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ИП Гладких Елена Евгеньевна',
         brand: 'Gladkih',
         quantity: 1,
+        expirationDate: 'не ограничен',
         composition: 'хлопок 98%, эластан 2%',
         country: 'Россия',
-        tnved: '6203423100',
-        manufacturer: 'ИП Гладких Елена Евгеньевна',
-        care: 'бережная стирка 30C'
+        supplier: 'ИП Гладких Елена Евгеньевна',
+        freeText: 'бережная стирка 30C',
+        eac: 'EAC'
       },
       {
         barcode: '2049332136788',
@@ -124,11 +139,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ИП Гладких Елена Евгеньевна',
         brand: 'Gladkih',
         quantity: 1,
+        expirationDate: 'не ограничен',
         composition: 'хлопок 98%, эластан 2%',
         country: 'Россия',
-        tnved: '6203423100',
-        manufacturer: 'ИП Гладких Елена Евгеньевна',
-        care: 'бережная стирка 30C'
+        supplier: 'ИП Гладких Елена Евгеньевна',
+        freeText: 'бережная стирка 30C',
+        eac: 'EAC'
       },
       {
         barcode: '2049332136795',
@@ -139,11 +155,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ИП Гладких Елена Евгеньевна',
         brand: 'Gladkih',
         quantity: 1,
+        expirationDate: 'не ограничен',
         composition: 'хлопок 98%, эластан 2%',
         country: 'Россия',
-        tnved: '6203423100',
-        manufacturer: 'ИП Гладких Елена Евгеньевна',
-        care: 'бережная стирка 30C'
+        supplier: 'ИП Гладких Елена Евгеньевна',
+        freeText: 'бережная стирка 30C',
+        eac: 'EAC'
       }
     ]
   },
@@ -164,11 +181,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ООО Северная линия',
         brand: 'Nord Line',
         quantity: 2,
+        expirationDate: 'не ограничен',
         composition: 'хлопок 100%',
         country: 'Узбекистан',
-        tnved: '6205200000',
-        manufacturer: 'ООО Северная линия',
-        care: 'гладить при средней температуре'
+        supplier: 'ООО Северная линия',
+        freeText: 'гладить при средней температуре',
+        eac: 'EAC'
       },
       {
         barcode: '2037710010182',
@@ -179,11 +197,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ООО Северная линия',
         brand: 'Nord Line',
         quantity: 3,
+        expirationDate: 'не ограничен',
         composition: 'хлопок 100%',
         country: 'Узбекистан',
-        tnved: '6205200000',
-        manufacturer: 'ООО Северная линия',
-        care: 'гладить при средней температуре'
+        supplier: 'ООО Северная линия',
+        freeText: 'гладить при средней температуре',
+        eac: 'EAC'
       }
     ]
   },
@@ -204,11 +223,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ООО Степвей',
         brand: 'Stepway',
         quantity: 4,
+        expirationDate: 'не ограничен',
         composition: 'текстиль, полиуретан',
         country: 'Китай',
-        tnved: '6404199000',
-        manufacturer: 'ООО Степвей',
-        care: 'сухая чистка'
+        supplier: 'ООО Степвей',
+        freeText: 'сухая чистка',
+        eac: 'EAC'
       },
       {
         barcode: '2073340000418',
@@ -219,11 +239,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ООО Степвей',
         brand: 'Stepway',
         quantity: 4,
+        expirationDate: 'не ограничен',
         composition: 'текстиль, полиуретан',
         country: 'Китай',
-        tnved: '6404199000',
-        manufacturer: 'ООО Степвей',
-        care: 'сухая чистка'
+        supplier: 'ООО Степвей',
+        freeText: 'сухая чистка',
+        eac: 'EAC'
       },
       {
         barcode: '2073340000425',
@@ -234,11 +255,12 @@ export const wildberriesProducts: WildberriesProduct[] = [
         sellerName: 'ООО Степвей',
         brand: 'Stepway',
         quantity: 2,
+        expirationDate: 'не ограничен',
         composition: 'текстиль, полиуретан',
         country: 'Китай',
-        tnved: '6404199000',
-        manufacturer: 'ООО Степвей',
-        care: 'сухая чистка'
+        supplier: 'ООО Степвей',
+        freeText: 'сухая чистка',
+        eac: 'EAC'
       }
     ]
   }

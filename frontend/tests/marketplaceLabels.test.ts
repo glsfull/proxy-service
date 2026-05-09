@@ -5,6 +5,7 @@ import {
   marketplaceTabs,
   sortProductsByArticle,
   wildberriesAdditionalFields,
+  wildberriesAdditionalTableColumns,
   wildberriesTableColumns,
   wildberriesProducts
 } from '../utils/marketplaceLabels'
@@ -55,24 +56,36 @@ describe('marketplace label generator data', () => {
       'Название товара',
       'Наименование продавца',
       'Бренд',
+      'Срок годности',
+      'Страна',
+      'Бренд',
       'Состав',
-      'Страна производства',
-      'ТНВЭД',
-      'Изготовитель',
-      'Уход за товаром'
+      'Поставщик',
+      'Свободная надпись',
+      'EAC'
     ])
   })
 
-  it('provides additional fields for every Wildberries size row', () => {
+  it('provides collapsed checkbox additional fields for every Wildberries size row', () => {
     const fieldKeys = wildberriesAdditionalFields.map((field) => field.key)
 
-    expect(fieldKeys).toEqual(['composition', 'country', 'tnved', 'manufacturer', 'care'])
+    expect(fieldKeys).toEqual([
+      'expirationDate',
+      'country',
+      'brand',
+      'composition',
+      'supplier',
+      'freeText',
+      'eac'
+    ])
+    expect(wildberriesAdditionalTableColumns.map((column) => column.key)).toEqual(fieldKeys)
     expect(wildberriesProducts[0].sizes[0]).toMatchObject({
+      expirationDate: 'не ограничен',
       composition: 'хлопок 98%, эластан 2%',
       country: 'Россия',
-      tnved: '6203423100',
-      manufacturer: 'ИП Гладких Елена Евгеньевна',
-      care: 'бережная стирка 30C'
+      supplier: 'ИП Гладких Елена Евгеньевна',
+      freeText: 'бережная стирка 30C',
+      eac: 'EAC'
     })
   })
 })

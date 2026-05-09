@@ -6,8 +6,9 @@ import {
   marketplaceTabs,
   sortProductsByArticle,
   wildberriesAdditionalFields,
+  wildberriesAdditionalTableColumns,
+  wildberriesBaseTableColumns,
   wildberriesProducts,
-  wildberriesTableColumns,
   type Marketplace,
   type WildberriesSizeRowKey
 } from '~/utils/marketplaceLabels'
@@ -22,6 +23,12 @@ const selectedRows = computed(() => selectedProduct.value?.sizes ?? [])
 const firstLabel = computed(() => selectedRows.value[0])
 const totalSizes = computed(() => products.value.reduce((sum, product) => sum + product.sizes.length, 0))
 const bulkValues = ref<Partial<Record<WildberriesSizeRowKey, string>>>({})
+const isAdditionalFieldsOpen = ref(false)
+const selectedAdditionalFieldKeys = ref<WildberriesSizeRowKey[]>([])
+const visibleTableColumns = computed(() => [
+  ...wildberriesBaseTableColumns,
+  ...wildberriesAdditionalTableColumns.filter((column) => selectedAdditionalFieldKeys.value.includes(column.key))
+])
 
 function openProduct(productId: number) {
   selectedProductId.value = productId
@@ -67,9 +74,13 @@ function updateBulkValue(key: WildberriesSizeRowKey, value: string) {
   bulkValues.value[key] = value
 }
 
-function updateAdditionalField(key: WildberriesSizeRowKey, value: string) {
-  bulkValues.value[key] = value
-  applyBulkValue(key)
+function toggleAdditionalField(key: WildberriesSizeRowKey, checked: boolean) {
+  if (checked) {
+    selectedAdditionalFieldKeys.value = [...new Set([...selectedAdditionalFieldKeys.value, key])]
+    return
+  }
+
+  selectedAdditionalFieldKeys.value = selectedAdditionalFieldKeys.value.filter((fieldKey) => fieldKey !== key)
 }
 </script>
 
@@ -186,18 +197,23 @@ function updateAdditionalField(key: WildberriesSizeRowKey, value: string) {
         </div>
 
         <div class="additional-fields">
-          <div class="additional-fields-head">
+          <button
+            class="additional-fields-head"
+            type="button"
+            :aria-expanded="isAdditionalFieldsOpen"
+            @click="isAdditionalFieldsOpen = !isAdditionalFieldsOpen"
+          >
             <p class="panel-title">Дополнительные поля</p>
-            <span>Данные попадут в таблицу размеров и в этикетку</span>
-          </div>
-          <div class="additional-grid">
-            <label v-for="field in wildberriesAdditionalFields" :key="field.key" class="additional-field">
-              <span>{{ field.label }}</span>
+            <span>{{ selectedAdditionalFieldKeys.length }} выбрано</span>
+          </button>
+          <div v-if="isAdditionalFieldsOpen" class="additional-grid">
+            <label v-for="field in wildberriesAdditionalFields" :key="field.key" class="additional-field-option">
               <input
-                :value="String(firstLabel?.[field.key] ?? '')"
-                type="text"
-                @input="updateAdditionalField(field.key, ($event.target as HTMLInputElement).value)"
+                type="checkbox"
+                :checked="selectedAdditionalFieldKeys.includes(field.key)"
+                @change="toggleAdditionalField(field.key, ($event.target as HTMLInputElement).checked)"
               >
+              <span>{{ field.label }}</span>
             </label>
           </div>
         </div>
@@ -206,7 +222,7 @@ function updateAdditionalField(key: WildberriesSizeRowKey, value: string) {
           <table>
             <thead>
               <tr>
-                <th v-for="column in wildberriesTableColumns" :key="column.key">
+                <th v-for="column in visibleTableColumns" :key="column.key">
                   <span>{{ column.label }}</span>
                   <div v-if="column.bulkEditable" class="bulk-editor">
                     <input
@@ -227,7 +243,7 @@ function updateAdditionalField(key: WildberriesSizeRowKey, value: string) {
             </thead>
             <tbody>
               <tr v-for="(row, rowIndex) in selectedRows" :key="`${row.barcode}-${row.size}`">
-                <td v-for="column in wildberriesTableColumns" :key="column.key">
+                <td v-for="column in visibleTableColumns" :key="column.key">
                   <input
                     class="cell-input"
                     :type="column.inputType ?? 'text'"
@@ -531,8 +547,13 @@ h1 {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
   gap: 16px;
-  margin-bottom: 12px;
+  cursor: pointer;
+  text-align: left;
 }
 
 .additional-fields-head span {
@@ -544,21 +565,32 @@ h1 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 10px;
+  margin-top: 12px;
 }
 
-.additional-field {
-  display: grid;
-  gap: 6px;
+.additional-field-option {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d6e0ee;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 8px 10px;
 }
 
-.additional-field span {
+.additional-field-option span {
   color: #334155;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
-  text-transform: uppercase;
 }
 
-.additional-field input,
+.additional-field-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+}
+
 .bulk-editor input,
 .cell-input {
   width: 100%;
@@ -568,11 +600,6 @@ h1 {
   background: #ffffff;
   color: #0f172a;
   font: inherit;
-}
-
-.additional-field input {
-  min-height: 38px;
-  padding: 8px 10px;
 }
 
 .table-wrap {
@@ -585,7 +612,7 @@ h1 {
 
 table {
   width: 100%;
-  min-width: 1720px;
+  min-width: 1320px;
   border-collapse: collapse;
 }
 
@@ -636,8 +663,7 @@ td {
 }
 
 .cell-input:focus,
-.bulk-editor input:focus,
-.additional-field input:focus {
+.bulk-editor input:focus {
   border-color: #2563eb;
   outline: 2px solid rgba(37, 99, 235, 0.18);
 }
