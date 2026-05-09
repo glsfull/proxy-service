@@ -5,18 +5,30 @@ import {
   getTotalLabelCount,
   marketplaceTabs,
   sortProductsByArticle,
+  wildberriesAdditionalFields,
+  wildberriesAdditionalTableColumns,
+  wildberriesBaseTableColumns,
   wildberriesProducts,
-  type Marketplace
+  type Marketplace,
+  type WildberriesSizeRowKey
 } from '~/utils/marketplaceLabels'
 
 const activeMarketplace = ref<Marketplace>('wildberries')
 const selectedProductId = ref<number | null>(null)
+const products = ref(structuredClone(wildberriesProducts))
 
-const sortedProducts = computed(() => sortProductsByArticle(wildberriesProducts))
-const selectedProduct = computed(() => findProductById(wildberriesProducts, selectedProductId.value))
+const sortedProducts = computed(() => sortProductsByArticle(products.value))
+const selectedProduct = computed(() => findProductById(products.value, selectedProductId.value))
 const selectedRows = computed(() => selectedProduct.value?.sizes ?? [])
 const firstLabel = computed(() => selectedRows.value[0])
-const totalSizes = computed(() => wildberriesProducts.reduce((sum, product) => sum + product.sizes.length, 0))
+const totalSizes = computed(() => products.value.reduce((sum, product) => sum + product.sizes.length, 0))
+const bulkValues = ref<Partial<Record<WildberriesSizeRowKey, string>>>({})
+const isAdditionalFieldsOpen = ref(false)
+const selectedAdditionalFieldKeys = ref<WildberriesSizeRowKey[]>([])
+const visibleTableColumns = computed(() => [
+  ...wildberriesBaseTableColumns,
+  ...wildberriesAdditionalTableColumns.filter((column) => selectedAdditionalFieldKeys.value.includes(column.key))
+])
 
 function openProduct(productId: number) {
   selectedProductId.value = productId
@@ -24,6 +36,51 @@ function openProduct(productId: number) {
 
 function backToProducts() {
   selectedProductId.value = null
+}
+
+function updateRowValue(rowIndex: number, key: WildberriesSizeRowKey, value: string) {
+  const row = selectedRows.value[rowIndex]
+
+  if (!row) {
+    return
+  }
+
+  if (key === 'quantity') {
+    row[key] = Number(value)
+    return
+  }
+
+  row[key] = value
+}
+
+function applyBulkValue(key: WildberriesSizeRowKey, directValue?: string) {
+  const value = directValue ?? bulkValues.value[key]
+
+  if (value === undefined) {
+    return
+  }
+
+  selectedRows.value.forEach((row) => {
+    if (key === 'quantity') {
+      row[key] = Number(value)
+      return
+    }
+
+    row[key] = value
+  })
+}
+
+function updateBulkValue(key: WildberriesSizeRowKey, value: string) {
+  bulkValues.value[key] = value
+}
+
+function toggleAdditionalField(key: WildberriesSizeRowKey, checked: boolean) {
+  if (checked) {
+    selectedAdditionalFieldKeys.value = [...new Set([...selectedAdditionalFieldKeys.value, key])]
+    return
+  }
+
+  selectedAdditionalFieldKeys.value = selectedAdditionalFieldKeys.value.filter((fieldKey) => fieldKey !== key)
 }
 </script>
 
@@ -111,7 +168,7 @@ function backToProducts() {
           </div>
         </div>
 
-        <div class="label-settings">
+        <div class="label-settings" :class="{ 'settings-open': isAdditionalFieldsOpen }">
           <span>Штрихкод:</span>
           <UBadge>1-й</UBadge>
           <UBadge color="gray" variant="subtle">2-й</UBadge>
@@ -124,6 +181,28 @@ function backToProducts() {
           <span>Формат:</span>
           <UBadge>CODE128</UBadge>
           <UBadge color="gray" variant="subtle">EAN13</UBadge>
+          <span>Текст:</span>
+          <UBadge>По центру</UBadge>
+          <UBadge color="gray" variant="subtle">Слева</UBadge>
+          <button
+            class="extra-fields-toggle"
+            type="button"
+            :aria-expanded="isAdditionalFieldsOpen"
+            @click="isAdditionalFieldsOpen = !isAdditionalFieldsOpen"
+          >
+            Доп. поля {{ isAdditionalFieldsOpen ? '▲' : '▼' }}
+          </button>
+        </div>
+
+        <div v-if="isAdditionalFieldsOpen" class="additional-fields-panel">
+          <label v-for="field in wildberriesAdditionalFields" :key="field.key" class="additional-field-option">
+            <input
+              type="checkbox"
+              :checked="selectedAdditionalFieldKeys.includes(field.key)"
+              @change="toggleAdditionalField(field.key, ($event.target as HTMLInputElement).checked)"
+            >
+            <span>{{ field.label }}</span>
+          </label>
         </div>
 
         <div class="preview-band">
@@ -132,8 +211,9 @@ function backToProducts() {
             <div class="barcode-lines" />
             <strong>{{ firstLabel?.barcode }}</strong>
             <span>{{ selectedProduct.name }}</span>
-            <small>Арт: {{ selectedProduct.article }} · {{ firstLabel?.color }} · {{ firstLabel?.size }}</small>
-            <small>{{ selectedProduct.brand }}</small>
+            <small>Арт: {{ firstLabel?.article }} · {{ firstLabel?.color }} · {{ firstLabel?.size }}</small>
+            <small>{{ firstLabel?.brand }}</small>
+            <small v-if="firstLabel?.composition">{{ firstLabel.composition }}</small>
             <b>EAC</b>
           </div>
         </div>
@@ -142,26 +222,38 @@ function backToProducts() {
           <table>
             <thead>
               <tr>
-                <th>Штрихкод</th>
-                <th>Артикул</th>
-                <th>Цвет</th>
-                <th>Размер</th>
-                <th>Название товара</th>
-                <th>Наименование продавца</th>
-                <th>Бренд</th>
-                <th>Кол-во</th>
+                <th v-for="column in visibleTableColumns" :key="column.key">
+                  <span>{{ column.label }}</span>
+                  <div v-if="column.bulkEditable" class="bulk-editor">
+                    <input
+                      :value="bulkValues[column.key] ?? ''"
+                      type="text"
+                      :aria-label="`Массовое значение: ${column.label}`"
+                      @input="updateBulkValue(column.key, ($event.target as HTMLInputElement).value)"
+                    >
+                    <button
+                      class="bulk-apply-btn"
+                      type="button"
+                      :aria-label="`Применить ко всем: ${column.label}`"
+                      @click="applyBulkValue(column.key, (($event.currentTarget as HTMLButtonElement).previousElementSibling as HTMLInputElement).value)"
+                    >
+                      ✓
+                    </button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in selectedRows" :key="row.barcode">
-                <td>{{ row.barcode }}</td>
-                <td>{{ row.article }}</td>
-                <td>{{ row.color }}</td>
-                <td>{{ row.size }}</td>
-                <td>{{ row.productName }}</td>
-                <td>{{ row.sellerName }}</td>
-                <td>{{ row.brand }}</td>
-                <td>{{ row.quantity }}</td>
+              <tr v-for="(row, rowIndex) in selectedRows" :key="`${row.barcode}-${row.size}`">
+                <td v-for="column in visibleTableColumns" :key="column.key">
+                  <input
+                    class="cell-input"
+                    :type="column.inputType ?? 'text'"
+                    :value="row[column.key]"
+                    :aria-label="`${column.label}: ${row.size}`"
+                    @input="updateRowValue(rowIndex, column.key, ($event.target as HTMLInputElement).value)"
+                  >
+                </td>
               </tr>
             </tbody>
           </table>
@@ -391,6 +483,12 @@ h1 {
   font-weight: 700;
 }
 
+.label-settings.settings-open {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: #fde68a;
+}
+
 .preview-band {
   min-height: 220px;
   margin-top: 12px;
@@ -445,6 +543,68 @@ h1 {
   font-size: 14px;
 }
 
+.extra-fields-toggle {
+  min-height: 32px;
+  border: 1px solid #c9d7ea;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.extra-fields-toggle[aria-expanded="true"] {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.additional-fields-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 10px 14px;
+  border: 1px solid #fde68a;
+  border-top: 0;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  background: #fefce8;
+  margin-bottom: 12px;
+}
+
+.additional-field-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.additional-field-option span {
+  color: #334155;
+  font-size: 13px;
+}
+
+.additional-field-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+}
+
+.bulk-editor input,
+.cell-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #c9d7ea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+}
+
 .table-wrap {
   overflow-x: auto;
   margin-top: 12px;
@@ -455,13 +615,13 @@ h1 {
 
 table {
   width: 100%;
-  min-width: 1100px;
+  min-width: 1320px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 12px 14px;
+  padding: 10px;
   border-bottom: 1px solid #dbe4f0;
   text-align: left;
   white-space: nowrap;
@@ -472,11 +632,51 @@ th {
   color: #334155;
   font-size: 12px;
   text-transform: uppercase;
+  vertical-align: top;
 }
 
 td {
   color: #0f172a;
   font-size: 14px;
+}
+
+.bulk-editor {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) auto;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.bulk-editor input,
+.cell-input {
+  min-height: 30px;
+  padding: 5px 7px;
+}
+
+.bulk-apply-btn {
+  min-height: 30px;
+  width: 30px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bulk-apply-btn:hover {
+  background: #1d4ed8;
+}
+
+.cell-input:focus,
+.bulk-editor input:focus {
+  border-color: #2563eb;
+  outline: 2px solid rgba(37, 99, 235, 0.18);
 }
 
 .planned-view {

@@ -4,6 +4,9 @@ import {
   getTotalLabelCount,
   marketplaceTabs,
   sortProductsByArticle,
+  wildberriesAdditionalFields,
+  wildberriesAdditionalTableColumns,
+  wildberriesTableColumns,
   wildberriesProducts
 } from '../utils/marketplaceLabels'
 
@@ -39,5 +42,50 @@ describe('marketplace label generator data', () => {
     const product = findProductById(wildberriesProducts, 1018)
 
     expect(product && getTotalLabelCount(product)).toBe(5)
+  })
+
+  it('marks only requested columns and additional fields as bulk editable', () => {
+    const bulkEditableLabels = wildberriesTableColumns
+      .filter((column) => column.bulkEditable)
+      .map((column) => column.label)
+
+    expect(bulkEditableLabels).toEqual([
+      'Штрихкод',
+      'Артикул',
+      'Цвет',
+      'Название товара',
+      'Наименование продавца',
+      'Бренд',
+      'Срок годности',
+      'Страна',
+      'Бренд',
+      'Состав',
+      'Поставщик',
+      'Свободная надпись',
+      'EAC'
+    ])
+  })
+
+  it('provides collapsed checkbox additional fields for every Wildberries size row', () => {
+    const fieldKeys = wildberriesAdditionalFields.map((field) => field.key)
+
+    expect(fieldKeys).toEqual([
+      'expirationDate',
+      'country',
+      'brand',
+      'composition',
+      'supplier',
+      'freeText',
+      'eac'
+    ])
+    expect(wildberriesAdditionalTableColumns.map((column) => column.key)).toEqual(fieldKeys)
+    expect(wildberriesProducts[0].sizes[0]).toMatchObject({
+      expirationDate: 'не ограничен',
+      composition: 'хлопок 98%, эластан 2%',
+      country: 'Россия',
+      supplier: 'ИП Гладких Елена Евгеньевна',
+      freeText: 'бережная стирка 30C',
+      eac: 'EAC'
+    })
   })
 })
