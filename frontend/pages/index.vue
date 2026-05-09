@@ -5,18 +5,23 @@ import {
   getTotalLabelCount,
   marketplaceTabs,
   sortProductsByArticle,
+  wildberriesAdditionalFields,
   wildberriesProducts,
-  type Marketplace
+  wildberriesTableColumns,
+  type Marketplace,
+  type WildberriesSizeRowKey
 } from '~/utils/marketplaceLabels'
 
 const activeMarketplace = ref<Marketplace>('wildberries')
 const selectedProductId = ref<number | null>(null)
+const products = ref(structuredClone(wildberriesProducts))
 
-const sortedProducts = computed(() => sortProductsByArticle(wildberriesProducts))
-const selectedProduct = computed(() => findProductById(wildberriesProducts, selectedProductId.value))
+const sortedProducts = computed(() => sortProductsByArticle(products.value))
+const selectedProduct = computed(() => findProductById(products.value, selectedProductId.value))
 const selectedRows = computed(() => selectedProduct.value?.sizes ?? [])
 const firstLabel = computed(() => selectedRows.value[0])
-const totalSizes = computed(() => wildberriesProducts.reduce((sum, product) => sum + product.sizes.length, 0))
+const totalSizes = computed(() => products.value.reduce((sum, product) => sum + product.sizes.length, 0))
+const bulkValues = ref<Partial<Record<WildberriesSizeRowKey, string>>>({})
 
 function openProduct(productId: number) {
   selectedProductId.value = productId
@@ -24,6 +29,47 @@ function openProduct(productId: number) {
 
 function backToProducts() {
   selectedProductId.value = null
+}
+
+function updateRowValue(rowIndex: number, key: WildberriesSizeRowKey, value: string) {
+  const row = selectedRows.value[rowIndex]
+
+  if (!row) {
+    return
+  }
+
+  if (key === 'quantity') {
+    row[key] = Number(value)
+    return
+  }
+
+  row[key] = value
+}
+
+function applyBulkValue(key: WildberriesSizeRowKey, directValue?: string) {
+  const value = directValue ?? bulkValues.value[key]
+
+  if (value === undefined) {
+    return
+  }
+
+  selectedRows.value.forEach((row) => {
+    if (key === 'quantity') {
+      row[key] = Number(value)
+      return
+    }
+
+    row[key] = value
+  })
+}
+
+function updateBulkValue(key: WildberriesSizeRowKey, value: string) {
+  bulkValues.value[key] = value
+}
+
+function updateAdditionalField(key: WildberriesSizeRowKey, value: string) {
+  bulkValues.value[key] = value
+  applyBulkValue(key)
 }
 </script>
 
@@ -132,9 +178,27 @@ function backToProducts() {
             <div class="barcode-lines" />
             <strong>{{ firstLabel?.barcode }}</strong>
             <span>{{ selectedProduct.name }}</span>
-            <small>Арт: {{ selectedProduct.article }} · {{ firstLabel?.color }} · {{ firstLabel?.size }}</small>
-            <small>{{ selectedProduct.brand }}</small>
+            <small>Арт: {{ firstLabel?.article }} · {{ firstLabel?.color }} · {{ firstLabel?.size }}</small>
+            <small>{{ firstLabel?.brand }}</small>
+            <small v-if="firstLabel?.composition">{{ firstLabel.composition }}</small>
             <b>EAC</b>
+          </div>
+        </div>
+
+        <div class="additional-fields">
+          <div class="additional-fields-head">
+            <p class="panel-title">Дополнительные поля</p>
+            <span>Данные попадут в таблицу размеров и в этикетку</span>
+          </div>
+          <div class="additional-grid">
+            <label v-for="field in wildberriesAdditionalFields" :key="field.key" class="additional-field">
+              <span>{{ field.label }}</span>
+              <input
+                :value="String(firstLabel?.[field.key] ?? '')"
+                type="text"
+                @input="updateAdditionalField(field.key, ($event.target as HTMLInputElement).value)"
+              >
+            </label>
           </div>
         </div>
 
@@ -142,26 +206,36 @@ function backToProducts() {
           <table>
             <thead>
               <tr>
-                <th>Штрихкод</th>
-                <th>Артикул</th>
-                <th>Цвет</th>
-                <th>Размер</th>
-                <th>Название товара</th>
-                <th>Наименование продавца</th>
-                <th>Бренд</th>
-                <th>Кол-во</th>
+                <th v-for="column in wildberriesTableColumns" :key="column.key">
+                  <span>{{ column.label }}</span>
+                  <div v-if="column.bulkEditable" class="bulk-editor">
+                    <input
+                      :value="bulkValues[column.key] ?? ''"
+                      type="text"
+                      :aria-label="`Массовое значение: ${column.label}`"
+                      @input="updateBulkValue(column.key, ($event.target as HTMLInputElement).value)"
+                    >
+                    <button
+                      type="button"
+                      @click="applyBulkValue(column.key, (($event.currentTarget as HTMLButtonElement).previousElementSibling as HTMLInputElement).value)"
+                    >
+                      Применить
+                    </button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in selectedRows" :key="row.barcode">
-                <td>{{ row.barcode }}</td>
-                <td>{{ row.article }}</td>
-                <td>{{ row.color }}</td>
-                <td>{{ row.size }}</td>
-                <td>{{ row.productName }}</td>
-                <td>{{ row.sellerName }}</td>
-                <td>{{ row.brand }}</td>
-                <td>{{ row.quantity }}</td>
+              <tr v-for="(row, rowIndex) in selectedRows" :key="`${row.barcode}-${row.size}`">
+                <td v-for="column in wildberriesTableColumns" :key="column.key">
+                  <input
+                    class="cell-input"
+                    :type="column.inputType ?? 'text'"
+                    :value="row[column.key]"
+                    :aria-label="`${column.label}: ${row.size}`"
+                    @input="updateRowValue(rowIndex, column.key, ($event.target as HTMLInputElement).value)"
+                  >
+                </td>
               </tr>
             </tbody>
           </table>
@@ -445,6 +519,62 @@ h1 {
   font-size: 14px;
 }
 
+.additional-fields {
+  margin-top: 12px;
+  border: 1px solid #d6e0ee;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.additional-fields-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.additional-fields-head span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.additional-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.additional-field {
+  display: grid;
+  gap: 6px;
+}
+
+.additional-field span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.additional-field input,
+.bulk-editor input,
+.cell-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #c9d7ea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.additional-field input {
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
 .table-wrap {
   overflow-x: auto;
   margin-top: 12px;
@@ -455,13 +585,13 @@ h1 {
 
 table {
   width: 100%;
-  min-width: 1100px;
+  min-width: 1720px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 12px 14px;
+  padding: 10px;
   border-bottom: 1px solid #dbe4f0;
   text-align: left;
   white-space: nowrap;
@@ -472,11 +602,44 @@ th {
   color: #334155;
   font-size: 12px;
   text-transform: uppercase;
+  vertical-align: top;
 }
 
 td {
   color: #0f172a;
   font-size: 14px;
+}
+
+.bulk-editor {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.bulk-editor input,
+.cell-input {
+  min-height: 34px;
+  padding: 7px 8px;
+}
+
+.bulk-editor button {
+  min-height: 34px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cell-input:focus,
+.bulk-editor input:focus,
+.additional-field input:focus {
+  border-color: #2563eb;
+  outline: 2px solid rgba(37, 99, 235, 0.18);
 }
 
 .planned-view {

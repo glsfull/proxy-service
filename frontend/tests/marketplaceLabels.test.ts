@@ -4,6 +4,8 @@ import {
   getTotalLabelCount,
   marketplaceTabs,
   sortProductsByArticle,
+  wildberriesAdditionalFields,
+  wildberriesTableColumns,
   wildberriesProducts
 } from '../utils/marketplaceLabels'
 
@@ -39,5 +41,38 @@ describe('marketplace label generator data', () => {
     const product = findProductById(wildberriesProducts, 1018)
 
     expect(product && getTotalLabelCount(product)).toBe(5)
+  })
+
+  it('marks only requested columns and additional fields as bulk editable', () => {
+    const bulkEditableLabels = wildberriesTableColumns
+      .filter((column) => column.bulkEditable)
+      .map((column) => column.label)
+
+    expect(bulkEditableLabels).toEqual([
+      'Штрихкод',
+      'Артикул',
+      'Цвет',
+      'Название товара',
+      'Наименование продавца',
+      'Бренд',
+      'Состав',
+      'Страна производства',
+      'ТНВЭД',
+      'Изготовитель',
+      'Уход за товаром'
+    ])
+  })
+
+  it('provides additional fields for every Wildberries size row', () => {
+    const fieldKeys = wildberriesAdditionalFields.map((field) => field.key)
+
+    expect(fieldKeys).toEqual(['composition', 'country', 'tnved', 'manufacturer', 'care'])
+    expect(wildberriesProducts[0].sizes[0]).toMatchObject({
+      composition: 'хлопок 98%, эластан 2%',
+      country: 'Россия',
+      tnved: '6203423100',
+      manufacturer: 'ИП Гладких Елена Евгеньевна',
+      care: 'бережная стирка 30C'
+    })
   })
 })
