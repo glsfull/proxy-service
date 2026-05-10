@@ -1,0 +1,69 @@
+{
+  "id": "wildberries",
+  "label": "Wildberries",
+  "status": "active",
+  "auth": {
+    "type": "bearer-token",
+    "requiredFields": ["token"],
+    "headerMap": {
+      "Authorization": "token"
+    }
+  },
+  "capabilities": {
+    "products": true,
+    "stocks": true,
+    "orders": true,
+    "finance": true,
+    "ads": true
+  },
+  "pagination": ["cursor", "id-continuation"],
+  "asyncReports": ["warehouse-remains", "financial-reports"],
+  "endpoints": [
+    {
+      "operation": "validate",
+      "method": "GET",
+      "url": "https://content-api.wildberries.ru/ping",
+      "requiredPermission": "content"
+    },
+    {
+      "operation": "syncProducts",
+      "method": "POST",
+      "url": "https://content-api.wildberries.ru/content/v2/get/cards/list",
+      "pagination": "cursor",
+      "productKeys": ["nmID", "chrtID", "vendorCode", "barcode"]
+    },
+    {
+      "operation": "syncStocks",
+      "method": "GET",
+      "url": "https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouseId}",
+      "pagination": "offset",
+      "productKeys": ["nmID", "chrtID", "barcode"]
+    },
+    {
+      "operation": "syncOrders",
+      "method": "GET",
+      "url": "https://statistics-api.wildberries.ru/api/v1/supplier/orders",
+      "pagination": "date-window",
+      "productKeys": ["nmId", "srid", "barcode"]
+    },
+    {
+      "operation": "syncFinance",
+      "method": "GET",
+      "url": "https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod",
+      "pagination": "id-continuation",
+      "continuationKey": "rrd_id",
+      "productKeys": ["nm_id", "sa_name", "barcode", "srid"]
+    },
+    {
+      "operation": "syncAds",
+      "method": "GET",
+      "url": "https://advert-api.wildberries.ru/adv/v1/promotion/count",
+      "pagination": "none"
+    }
+  ],
+  "rateLimits": {
+    "default": {
+      "requestsPerMinute": 60
+    }
+  }
+}
