@@ -1,11 +1,13 @@
-# Marketplace Label Generator
+# WB Analytics Frontend
 
-Nuxt 3 + Nuxt UI frontend for the marketplace label generator. Реализован сценарий Wildberries: карточки товаров, настройки этикетки, предпросмотр и редактируемая таблица размеров с массовым заполнением.
+Nuxt 4 + Nuxt UI frontend for Wildberries analytics workflows. The app includes authentication, profile setup, marketplace connections, analytics dashboards, support tickets, admin screens, and server API routes.
+
+The previous marketplace label generator remains available at `/labels`.
 
 ## Requirements
 
-- Node.js 20+ (рекомендуется 22+)
-- npm 9+
+- Node.js 22+ recommended
+- npm 11+
 
 ## Commands
 
@@ -14,14 +16,20 @@ npm install
 npm run dev
 npm test
 npm run typecheck
-npm run baklog
 npm run build
+npm run baklog
 ```
+
+`npm run lint` requires a Node runtime with `Object.groupBy` support.
 
 ## Documentation
 
-- [Сценарий и алгоритм](docs/barcode-dashboard.md)
-- [Руководство пользователя](docs/user-guide.md)
-- [Описание функционала](docs/feature-description.md)
+- [Backlog](docs/Backlog.md)
+- [API backlog](docs/Backlog-api.md)
+- [Roadmap](docs/Roadmap.md)
+- [WB API research plan](docs/WB_API_Research_Plan.md)
+- [Label generator scenario](docs/barcode-dashboard.md)
+- [Label generator user guide](docs/user-guide.md)
+- [Label generator feature description](docs/feature-description.md)
 
-Корневой файл [`baklog.md`](../baklog.md) содержит сводку текущих и запланированных работ, обновляется командой `npm run baklog`.
+Root [`baklog.md`](../baklog.md) contains the current and planned work summary, updated by `npm run baklog`.

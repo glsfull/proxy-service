@@ -1,0 +1,69 @@
+{
+  "id": "ozon",
+  "label": "Ozon",
+  "status": "planned",
+  "auth": {
+    "type": "client-id-api-key",
+    "requiredFields": ["clientId", "apiKey"],
+    "headerMap": {
+      "Client-Id": "clientId",
+      "Api-Key": "apiKey"
+    }
+  },
+  "capabilities": {
+    "products": true,
+    "stocks": true,
+    "orders": true,
+    "finance": true,
+    "ads": true
+  },
+  "pagination": ["offset", "cursor"],
+  "asyncReports": ["report-code"],
+  "endpoints": [
+    {
+      "operation": "validate",
+      "method": "POST",
+      "url": "https://api-seller.ozon.ru/v1/warehouse/list",
+      "requiredPermission": "seller-api"
+    },
+    {
+      "operation": "syncProducts",
+      "method": "POST",
+      "url": "https://api-seller.ozon.ru/v3/product/list",
+      "pagination": "last-id",
+      "productKeys": ["product_id", "offer_id", "sku"]
+    },
+    {
+      "operation": "syncStocks",
+      "method": "POST",
+      "url": "https://api-seller.ozon.ru/v4/product/info/stocks",
+      "pagination": "cursor",
+      "productKeys": ["product_id", "offer_id", "sku"]
+    },
+    {
+      "operation": "syncOrders",
+      "method": "POST",
+      "url": "https://api-seller.ozon.ru/v3/posting/fbs/list",
+      "pagination": "offset",
+      "productKeys": ["sku", "offer_id"]
+    },
+    {
+      "operation": "syncFinance",
+      "method": "POST",
+      "url": "https://api-seller.ozon.ru/v3/finance/transaction/list",
+      "pagination": "page",
+      "productKeys": ["sku", "posting_number"]
+    },
+    {
+      "operation": "syncAds",
+      "method": "POST",
+      "url": "https://performance.ozon.ru/api/client/campaign",
+      "pagination": "offset"
+    }
+  ],
+  "rateLimits": {
+    "default": {
+      "requestsPerMinute": 60
+    }
+  }
+}

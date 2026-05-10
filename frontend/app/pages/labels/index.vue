@@ -193,8 +193,8 @@ function handleDownloadPdf() {
           <h1>Генератор этикеток маркетплейсов</h1>
         </div>
         <div class="header-actions">
-          <UButton color="gray" variant="outline" @click="handlePreview">Предпросмотр</UButton>
-          <UButton color="gray" variant="outline" @click="handleDownloadPdf">Скачать PDF</UButton>
+          <UButton color="neutral" variant="outline" @click="handlePreview">Предпросмотр</UButton>
+          <UButton color="neutral" variant="outline" @click="handleDownloadPdf">Скачать PDF</UButton>
           <UButton @click="handleSave">{{ savedAt ? '✓ Сохранено' : 'Сохранить' }}</UButton>
         </div>
       </header>
@@ -225,7 +225,7 @@ function handleDownloadPdf() {
             <strong>{{ totalSizes }}</strong>
             <span>размеров доступно для этикеток</span>
           </div>
-          <UBadge color="blue" variant="subtle">Сортировка по артикулу</UBadge>
+          <UBadge color="info" variant="subtle">Сортировка по артикулу</UBadge>
         </div>
 
         <div class="product-grid">
@@ -253,7 +253,7 @@ function handleDownloadPdf() {
         class="detail-view"
       >
         <div class="detail-top">
-          <UButton color="gray" variant="outline" icon="i-heroicons-arrow-left" @click="backToProducts">
+          <UButton color="neutral" variant="outline" icon="i-heroicons-arrow-left" @click="backToProducts">
             Все товары
           </UButton>
           <img :src="selectedProduct.photo" :alt="selectedProduct.name">

@@ -1,0 +1,68 @@
+{
+  "id": "yandex-market",
+  "label": "Yandex Market",
+  "status": "planned",
+  "auth": {
+    "type": "oauth-business-campaign",
+    "requiredFields": ["oauthToken", "businessId", "campaignId"],
+    "headerMap": {
+      "Authorization": "oauthToken"
+    }
+  },
+  "capabilities": {
+    "products": true,
+    "stocks": true,
+    "orders": true,
+    "finance": true,
+    "ads": true
+  },
+  "pagination": ["page", "page-token"],
+  "asyncReports": ["report-generation"],
+  "endpoints": [
+    {
+      "operation": "validate",
+      "method": "GET",
+      "url": "https://api.partner.market.yandex.ru/businesses/{businessId}/offer-mappings",
+      "requiredPermission": "business"
+    },
+    {
+      "operation": "syncProducts",
+      "method": "GET",
+      "url": "https://api.partner.market.yandex.ru/businesses/{businessId}/offer-mappings",
+      "pagination": "page-token",
+      "productKeys": ["offerId", "marketSku", "businessId"]
+    },
+    {
+      "operation": "syncStocks",
+      "method": "POST",
+      "url": "https://api.partner.market.yandex.ru/campaigns/{campaignId}/offers/stocks",
+      "pagination": "page-token",
+      "productKeys": ["offerId", "warehouseId"]
+    },
+    {
+      "operation": "syncOrders",
+      "method": "GET",
+      "url": "https://api.partner.market.yandex.ru/campaigns/{campaignId}/orders",
+      "pagination": "page",
+      "productKeys": ["offerId", "marketSku", "orderId"]
+    },
+    {
+      "operation": "syncFinance",
+      "method": "GET",
+      "url": "https://api.partner.market.yandex.ru/campaigns/{campaignId}/stats/orders",
+      "pagination": "page-token",
+      "productKeys": ["offerId", "marketSku", "orderId"]
+    },
+    {
+      "operation": "syncAds",
+      "method": "GET",
+      "url": "https://api.partner.market.yandex.ru/campaigns/{campaignId}/stats/skus",
+      "pagination": "page-token"
+    }
+  ],
+  "rateLimits": {
+    "default": {
+      "requestsPerMinute": 60
+    }
+  }
+}
